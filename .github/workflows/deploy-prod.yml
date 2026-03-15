@@ -1,0 +1,111 @@
+name: Deploy Prod Backend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: vaultvibes-api
+  ECS_CLUSTER: vault-vibes-cluster
+  ECS_SERVICE: vault-backend-service
+  ECS_TASK_FAMILY: vault-backend-task
+  ECS_TASK_TEMPLATE: infrastructure/ecs-task-definition.prod.template.json
+  DB_SECRET_NAME: vaultvibes/prod/db
+  APP_SECRET_NAME: vaultvibes/prod/app
+  LOG_GROUP: /ecs/vault-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build and test
+        run: mvn -B test package
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
+          docker tag "$IMAGE_URI" "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          echo "image_uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve secret ARNs
+        id: secret-arns
+        run: |
+          DB_SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "$DB_SECRET_NAME" --query 'ARN' --output text)
+          APP_SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "$APP_SECRET_NAME" --query 'ARN' --output text)
+          echo "db_secret_arn=$DB_SECRET_ARN" >> "$GITHUB_OUTPUT"
+          echo "app_secret_arn=$APP_SECRET_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Render task definition
+        run: |
+          ECS_TASK_EXECUTION_ROLE_ARN=${{ secrets.ECS_TASK_EXECUTION_ROLE_ARN }}
+          ECS_TASK_ROLE_ARN=${{ secrets.ECS_TASK_ROLE_ARN }}
+          IMAGE_URI=${{ steps.image.outputs.image_uri }}
+          DB_SECRET_ARN=${{ steps.secret-arns.outputs.db_secret_arn }}
+          APP_SECRET_ARN=${{ steps.secret-arns.outputs.app_secret_arn }}
+
+          sed \
+            -e "s#__ECS_EXECUTION_ROLE_ARN__#$ECS_TASK_EXECUTION_ROLE_ARN#g" \
+            -e "s#__ECS_TASK_ROLE_ARN__#$ECS_TASK_ROLE_ARN#g" \
+            -e "s#__IMAGE_URI__#$IMAGE_URI#g" \
+            -e "s#__DB_SECRET_ARN__#$DB_SECRET_ARN#g" \
+            -e "s#__APP_SECRET_ARN__#$APP_SECRET_ARN#g" \
+            -e "s#__LOG_GROUP__#$LOG_GROUP#g" \
+            -e "s#__AWS_REGION__#$AWS_REGION#g" \
+            "$ECS_TASK_TEMPLATE" > task-definition.rendered.json
+
+      - name: Register new task definition
+        id: register-task
+        run: |
+          TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://task-definition.rendered.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+          echo "task_def_arn=$TASK_DEF_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to ECS service
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --task-definition "${{ steps.register-task.outputs.task_def_arn }}" \
+            --force-new-deployment
+
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+

@@ -9,7 +9,7 @@ REGION=us-east-1
 PROJECT=vaultvibes
 ENV=prod
 ECR_REPO=vaultvibes-api
-S3_BUCKET=vaultvibes-prod-exports
+S3_BUCKET=vault-vibes-uploads
 LOG_GROUP=/vaultvibes/prod/api
 
 # GitHub OIDC trust scope (required for deploy role trust policy)
@@ -552,10 +552,10 @@ ensure_secrets_manager_secrets() {
   note "Ensuring Secrets Manager entries..."
 
   local db_secret_payload
-  db_secret_payload='{"username":"vaultvibes_app","password":"REPLACE","jdbcUrl":"jdbc:postgresql://prod-omnisolve-postgres.cmrg4wcome3h.us-east-1.rds.amazonaws.com:5432/vaultvibes"}'
+  db_secret_payload='{"DB_URL":"jdbc:postgresql://prod-omnisolve-postgres.cmrg4wcome3h.us-east-1.rds.amazonaws.com:5432/vaultvibes","DB_USERNAME":"vaultvibes_app","DB_PASSWORD":"REPLACE"}'
 
   local app_secret_payload
-  app_secret_payload='{"springProfilesActive":"prod","jwtSecret":"REPLACE","corsAllowedOrigins":"https://app.vaultvibes.com"}'
+  app_secret_payload='{"APP_ENV":"prod","JWT_SECRET":"REPLACE","S3_BUCKET":"vault-vibes-uploads"}'
 
   DB_SECRET_ARN=$(aws_cli_optional secretsmanager describe-secret --secret-id "$DB_SECRET_NAME" --query 'ARN' --output text || true)
   if [[ -z "$DB_SECRET_ARN" || "$DB_SECRET_ARN" == "None" ]]; then

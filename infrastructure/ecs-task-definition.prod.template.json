@@ -1,0 +1,63 @@
+{
+  "family": "vault-backend-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "__ECS_EXECUTION_ROLE_ARN__",
+  "taskRoleArn": "__ECS_TASK_ROLE_ARN__",
+  "containerDefinitions": [
+    {
+      "name": "vault-backend",
+      "image": "__IMAGE_URI__",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "SPRING_PROFILES_ACTIVE",
+          "value": "prod"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DB_URL",
+          "valueFrom": "__DB_SECRET_ARN__:DB_URL::"
+        },
+        {
+          "name": "DB_USERNAME",
+          "valueFrom": "__DB_SECRET_ARN__:DB_USERNAME::"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "__DB_SECRET_ARN__:DB_PASSWORD::"
+        },
+        {
+          "name": "S3_BUCKET",
+          "valueFrom": "__APP_SECRET_ARN__:S3_BUCKET::"
+        },
+        {
+          "name": "APP_ENV",
+          "valueFrom": "__APP_SECRET_ARN__:APP_ENV::"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "__APP_SECRET_ARN__:JWT_SECRET::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "__LOG_GROUP__",
+          "awslogs-region": "__AWS_REGION__",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
+
