@@ -22,7 +22,7 @@ env:
   LOG_GROUP: /ecs/vault-backend
 
 jobs:
-  deploy:
+  check:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,8 +36,26 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Build and test
-        run: mvn -B test package
+      - name: Run tests
+        run: mvn -B test
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build package
+        run: mvn -B -DskipTests package
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
