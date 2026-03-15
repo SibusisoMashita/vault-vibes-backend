@@ -1,0 +1,12 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/vaultvibes
+    username: postgres
+    password: postgres
+  flyway:
+    default-schema: public
+    schemas: public
+

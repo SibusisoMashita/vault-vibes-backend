@@ -1,0 +1,23 @@
+{
+  "Rules": [
+    {
+      "ID": "proof-of-payment-archive",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "contributions/"
+      },
+      "Transitions": [
+        {
+          "Days": 365,
+          "StorageClass": "GLACIER"
+        }
+      ],
+      "NoncurrentVersionTransitions": [
+        {
+          "NoncurrentDays": 365,
+          "StorageClass": "GLACIER"
+        }
+      ]
+    }
+  ]
+}

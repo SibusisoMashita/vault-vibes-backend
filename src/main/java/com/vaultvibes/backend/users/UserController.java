@@ -1,0 +1,67 @@
+package com.vaultvibes.backend.users;
+
+import com.vaultvibes.backend.auth.Permission;
+import com.vaultvibes.backend.auth.PermissionService;
+import com.vaultvibes.backend.users.dto.MemberDTO;
+import com.vaultvibes.backend.users.dto.UserDTO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+@Tag(name = "Users", description = "User management and profile operations")
+public class UserController {
+
+    private final UserService userService;
+    private final PermissionService permissionService;
+
+    @GetMapping("/me")
+    @Operation(summary = "Get current authenticated user's profile and share data")
+    public MemberDTO me() {
+        UserEntity user = userService.getCurrentUser();
+        return userService.toMemberDTO(user);
+    }
+
+    @GetMapping
+    @Operation(summary = "List all users with their share and contribution summaries")
+    public List<MemberDTO> listUsers() {
+        return userService.listMembers();
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Update a user's full name and email")
+    public UserDTO update(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        return userService.updateProfile(id, body.get("fullName"), body.get("email"));
+    }
+
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "Change a user's status (ACTIVE, SUSPENDED)",
+               description = "Admin-only operation. Accepts {\"status\": \"ACTIVE\"} or {\"status\": \"SUSPENDED\"}")
+    public UserDTO updateStatus(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        permissionService.require(Permission.MANAGE_SHARES);
+        String status = body.get("status");
+        if (status == null || status.isBlank()) {
+            throw new IllegalArgumentException("status field is required");
+        }
+        return userService.updateStatus(id, status.toUpperCase());
+    }
+
+    @PatchMapping("/{id}/role")
+    @Operation(summary = "Change a user's role (MEMBER, TREASURER, CHAIRPERSON, ADMIN)",
+               description = "Admin-only operation. Accepts {\"role\": \"MEMBER\"}")
+    public UserDTO updateRole(@PathVariable UUID id, @RequestBody Map<String, String> body) {
+        permissionService.require(Permission.MANAGE_SHARES);
+        String role = body.get("role");
+        if (role == null || role.isBlank()) {
+            throw new IllegalArgumentException("role field is required");
+        }
+        return userService.updateRole(id, role.toUpperCase());
+    }
+}

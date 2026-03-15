@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: vault-vibes-api
+  profiles:
+    default: local
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    validate-on-migrate: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_Pmg4WjBdm
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+cognito:
+  user-pool-id: us-east-1_Pmg4WjBdm
+  region: us-east-1
+  client-id: 3qsigtvtgu0jm2h0qdb2cthfh2
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: alpha
+    tagsSorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+aws:
+  region: us-east-1
+  s3:
+    bucket: ${S3_BUCKET:vault-vibes-uploads}
+
+
+notifications:
+  eventbridge:
+    bus-name: vault-vibes-events
+    source: vaultvibes.finance
+  whatsapp:
+    phone-id: ${WHATSAPP_PHONE_ID:}
+    token: ${WHATSAPP_TOKEN:}
+
