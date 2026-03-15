@@ -11,6 +11,9 @@ ENV=prod
 ECR_REPO=vaultvibes-api
 S3_BUCKET=vault-vibes-uploads
 LOG_GROUP=/vaultvibes/prod/api
+ECS_CLUSTER=vault-vibes-cluster
+ECS_SERVICE=vault-backend-service
+ECS_TASK_FAMILY=vault-backend-task
 
 # GitHub OIDC trust scope (required for deploy role trust policy)
 GITHUB_REPO=${GITHUB_REPO:-REPLACE_ORG/REPLACE_REPO}
@@ -480,6 +483,31 @@ JSON
         "arn:aws:s3:::${S3_BUCKET}",
         "arn:aws:s3:::${S3_BUCKET}/*"
       ]
+    },
+    {
+      "Sid": "EcsDeploy",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:RegisterTaskDefinition",
+        "ecs:DeregisterTaskDefinition",
+        "ecs:DescribeTaskDefinition",
+        "ecs:UpdateService",
+        "ecs:DescribeServices"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowPassRoleForEcsTasks",
+      "Effect": "Allow",
+      "Action": [
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::${ACCOUNT_ID}:role/*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ecs-tasks.amazonaws.com"
+        }
+      }
     }
   ]
 }
