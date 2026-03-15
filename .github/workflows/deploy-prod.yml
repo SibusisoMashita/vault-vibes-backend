@@ -76,6 +76,35 @@ jobs:
           role-to-assume: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN != '' && secrets.AWS_GITHUB_DEPLOY_ROLE_ARN || env.AWS_GITHUB_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Validate ECS deployment target
+        run: |
+          if ! aws ecs describe-clusters --clusters "$ECS_CLUSTER" --query 'clusters[0].clusterArn' --output text >/tmp/cluster_arn.txt 2>/tmp/cluster_err.txt; then
+            echo "ECS cluster lookup failed for '$ECS_CLUSTER'." >&2
+            cat /tmp/cluster_err.txt >&2
+            exit 1
+          fi
+
+          CLUSTER_ARN=$(cat /tmp/cluster_arn.txt)
+          if [ -z "$CLUSTER_ARN" ] || [ "$CLUSTER_ARN" = "None" ]; then
+            echo "ECS cluster '$ECS_CLUSTER' does not exist in region $AWS_REGION." >&2
+            echo "Create it first, or set ECS_CLUSTER to an existing cluster name/ARN." >&2
+            echo "Existing clusters:" >&2
+            aws ecs list-clusters --query 'clusterArns' --output text >&2 || true
+            exit 1
+          fi
+
+          SERVICE_STATUS=$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0].status' \
+            --output text 2>/dev/null || true)
+
+          if [ -z "$SERVICE_STATUS" ] || [ "$SERVICE_STATUS" = "None" ] || [ "$SERVICE_STATUS" = "MISSING" ]; then
+            echo "ECS service '$ECS_SERVICE' not found in cluster '$ECS_CLUSTER'." >&2
+            echo "Create the service first, or set ECS_SERVICE to an existing service name." >&2
+            exit 1
+          fi
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
