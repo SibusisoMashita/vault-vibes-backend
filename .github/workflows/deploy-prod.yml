@@ -12,6 +12,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
+  AWS_GITHUB_DEPLOY_ROLE_ARN: arn:aws:iam::861870144419:role/vaultvibes-prod-github-deploy-role
   ECR_REPOSITORY: vaultvibes-api
   ECS_CLUSTER: vault-vibes-cluster
   ECS_SERVICE: vault-backend-service
@@ -57,10 +58,22 @@ jobs:
       - name: Build package
         run: mvn -B -DskipTests package
 
+      - name: Validate AWS role configuration
+        run: |
+          ROLE_INPUT="${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN }}"
+          if [ -z "$ROLE_INPUT" ]; then
+            ROLE_INPUT="$AWS_GITHUB_DEPLOY_ROLE_ARN"
+          fi
+          if [ -z "$ROLE_INPUT" ]; then
+            echo "Missing AWS deploy role. Set secrets.AWS_GITHUB_DEPLOY_ROLE_ARN or env.AWS_GITHUB_DEPLOY_ROLE_ARN." >&2
+            exit 1
+          fi
+          echo "Using deploy role ARN for OIDC auth."
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN != '' && secrets.AWS_GITHUB_DEPLOY_ROLE_ARN || env.AWS_GITHUB_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
