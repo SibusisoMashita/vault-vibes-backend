@@ -22,7 +22,7 @@
         "interval": 15,
         "timeout": 5,
         "retries": 3,
-        "startPeriod": 60
+        "startPeriod": 90
       },
       "stopTimeout": 60,
       "environment": [
@@ -68,4 +68,3 @@
     }
   ]
 }
-

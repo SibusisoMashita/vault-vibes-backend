@@ -183,6 +183,11 @@ jobs:
 
       - name: Render task definition
         run: |
+          # Keep the ECS task template as strict JSON. We cannot add inline comments there
+          # because ECS task definitions must remain valid JSON for aws ecs register-task-definition.
+          # Production previously failed when `|| exit 1` was missing from the container health
+          # check, which caused the shell command to report the container unhealthy, and the
+          # startPeriod is 90 seconds because Spring Boot startup is ~63 seconds in production.
           ECS_TASK_EXECUTION_ROLE_ARN=${{ steps.ecs-roles.outputs.execution_role_arn }}
           ECS_TASK_ROLE_ARN=${{ steps.ecs-roles.outputs.task_role_arn }}
           IMAGE_URI=${{ steps.image.outputs.image_uri }}
@@ -198,6 +203,9 @@ jobs:
             -e "s#__LOG_GROUP__#$LOG_GROUP#g" \
             -e "s#__AWS_REGION__#$AWS_REGION#g" \
             "$ECS_TASK_TEMPLATE" > task-definition.rendered.json
+
+      - name: Validate rendered task definition JSON
+        run: python3 -m json.tool task-definition.rendered.json >/dev/null
 
       - name: Register new task definition
         id: register-task
@@ -218,5 +226,12 @@ jobs:
 
           aws ecs wait services-stable \
             --cluster "$ECS_CLUSTER" \
-            --services "$ECS_SERVICE"
+            --services "$ECS_SERVICE" || {
+              echo "Service failed to stabilize. Dumping ECS events:"
+              aws ecs describe-services \
+                --cluster "$ECS_CLUSTER" \
+                --services "$ECS_SERVICE" \
+                --query 'services[0].events[0:10]'
+              exit 1
+            }
 
