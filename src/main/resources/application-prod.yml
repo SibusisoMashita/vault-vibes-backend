@@ -12,5 +12,6 @@ spring:
 
 app:
   cors:
-    allowed-origins: https://vaultvibes.co.za
+    allowed-origins:
+      - https://vaultvibes.co.za
 
