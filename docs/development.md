@@ -150,6 +150,8 @@ com.vaultvibes.backend.<domain>/
     └── <Domain>RequestDTO.java
 ```
 
+Shared financial calculations go in `com.vaultvibes.backend.util.FinanceUtil`.
+
 If the module introduces new permission checks:
 1. Add the permission to `Permission.java`.
 2. Add it to the appropriate role set in `RolePermissions.java`.
@@ -158,12 +160,12 @@ If the module introduces new permission checks:
 
 ## CORS
 
-CORS is configured in `CorsConfig.java`. Allowed origins for local development:
+CORS is configured in `CorsConfig.java` and reads allowed origins from `application.yml` (`app.cors.allowed-origins`). Local development allows:
 
 - `http://localhost:5173` (Vite dev server)
 - `http://localhost:3000`
 
-For production, update `CorsConfig` to allow the deployed frontend origin.
+Production allows `https://vaultvibes.co.za`. To change origins, update the relevant profile YAML — no code changes needed.
 
 ---
 

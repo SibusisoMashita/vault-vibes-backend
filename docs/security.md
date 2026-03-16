@@ -33,9 +33,10 @@ sequenceDiagram
 Spring Security is configured as an **OAuth2 Resource Server**. On every request to `/api/**`:
 
 1. The `Authorization: Bearer` header is extracted.
-2. The JWT is validated against the Cognito JWKS endpoint (`https://cognito-idp.us-east-1.amazonaws.com/us-east-1_Pmg4WjBdm/.well-known/jwks.json`).
+2. The JWT is validated against the Cognito JWKS endpoint.
 3. Signature, issuer URI, and expiry are all verified.
-4. The `cognito:groups` claim is mapped to Spring `GrantedAuthority` objects with the `ROLE_` prefix.
+4. The `token_use` claim must equal `access` — id_tokens and refresh_tokens are rejected.
+5. The `cognito:groups` claim is mapped to Spring `GrantedAuthority` objects with the `ROLE_` prefix.
 
 Configuration in `SecurityConfig.java`:
 
@@ -82,17 +83,17 @@ Proof-of-payment files are stored in a **private S3 bucket**. Access is never gr
 
 ## CORS Policy
 
-CORS is configured in `CorsConfig.java`:
+CORS is configured in `CorsConfig.java` using profile-based allowed origins from `application.yml`:
 
 | Setting | Value |
 |---|---|
-| Allowed origins | `http://localhost:5173`, `http://localhost:3000` |
-| Allowed methods | `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS` |
-| Allowed headers | `*` |
-| Exposed headers | `Authorization` |
+| Allowed origins | Configured per profile (`app.cors.allowed-origins`) |
+| Allowed methods | `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS` |
+| Allowed headers | `Authorization`, `Content-Type`, `Accept`, `Origin`, `X-Requested-With` |
 | Allow credentials | `true` |
+| Max age | 3600s |
 
-For production, update the allowed origins to include the deployed frontend domain.
+Local profile allows `localhost:5173` and `localhost:3000`. Production allows `https://vaultvibes.co.za`.
 
 ## Session Management
 

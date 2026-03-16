@@ -29,7 +29,7 @@ public class InvitationController {
     @ResponseStatus(HttpStatus.CREATED)
     public InvitationDTO create(@Valid @RequestBody InvitationRequestDTO request) {
         permissionService.require(Permission.INVITE_MEMBER);
-        return invitationService.createInvitation(request.phoneNumber(), request.role(), request.shareUnits());
+        return invitationService.inviteMember(request.fullName(), request.phoneNumber(), request.role(), request.shareUnits());
     }
 
     @PostMapping("/{id}/resend")

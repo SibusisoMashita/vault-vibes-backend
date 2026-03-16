@@ -19,6 +19,7 @@ public interface ShareRepository extends JpaRepository<ShareEntity, UUID> {
     @Query("SELECT COALESCE(SUM(s.shareUnits), 0) FROM ShareEntity s")
     BigDecimal sumAllShareUnits();
 
+
     @Query("SELECT COALESCE(SUM(s.shareUnits * s.pricePerUnit), 0) FROM ShareEntity s WHERE s.user.id = :userId")
     BigDecimal sumCommitmentByUserId(UUID userId);
 

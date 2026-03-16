@@ -28,6 +28,10 @@ public class LedgerEntryEntity {
     @Column(name = "entry_type", nullable = false, length = 60)
     private String entryType;
 
+    // 'USER' for member transactions; 'SYSTEM' for pool-level entries (e.g. BANK_INTEREST)
+    @Column(name = "entry_scope", nullable = false, length = 10)
+    private String entryScope = "USER";
+
     @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 

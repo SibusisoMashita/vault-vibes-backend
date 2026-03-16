@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -24,6 +25,15 @@ public class StokvelConfigEntity {
 
     @Column(name = "share_price", nullable = false, precision = 19, scale = 2)
     private BigDecimal sharePrice = new BigDecimal("5000.00");
+
+    @Column(name = "cycle_months", nullable = false)
+    private int cycleMonths = 12;
+
+    @Column(name = "monthly_contribution", nullable = false, precision = 19, scale = 2)
+    private BigDecimal monthlyContribution = new BigDecimal("500.00");
+
+    @Column(name = "cycle_start_date", nullable = false)
+    private LocalDate cycleStartDate = LocalDate.of(2025, 1, 1);
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)

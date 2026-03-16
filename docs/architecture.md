@@ -66,9 +66,11 @@ flowchart TD
 ```mermaid
 flowchart TD
     HTTP[HTTP Request] --> SC[SecurityFilterChain\nJWT validation]
-    SC --> Controller[Controller]
+    SC --> UCI[UserContextInterceptor\nResolve DB user]
+    UCI --> Controller[Controller]
     Controller --> PS[PermissionService\nrole check]
     Controller --> Service[Service]
+    Service --> FU[FinanceUtil\ncentralized calculations]
     Service --> Repository[Spring Data JPA Repository]
     Repository --> DB[(PostgreSQL)]
     Service --> NES[NotificationEventService]
@@ -78,6 +80,9 @@ flowchart TD
 ```
 
 ## Design Decisions
+
+### Centralized financial calculations
+All pool valuation, share pricing, interest, and borrowing limit formulas live in `FinanceUtil.java`. Services call these static methods instead of implementing calculations inline. This eliminates duplication and ensures consistency across the dashboard, pool, loan, and contribution services.
 
 ### Ledger as source of truth
 All pool money movement is recorded in `ledger_entries`. Pool stats (balance, liquidity, per-share value) are computed by aggregating ledger entries at query time. This makes the ledger auditable and prevents silent state drift.

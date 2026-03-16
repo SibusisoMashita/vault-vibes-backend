@@ -36,6 +36,7 @@ public class LedgerService {
         LedgerEntryEntity entry = new LedgerEntryEntity();
         entry.setUser(null);   // pool-level income — not tied to any member
         entry.setEntryType("BANK_INTEREST");
+        entry.setEntryScope("SYSTEM");
         entry.setAmount(request.amount());
         entry.setReference(request.reference());
         entry.setDescription(request.description());
@@ -56,6 +57,7 @@ public class LedgerService {
                 userId,
                 fullName,
                 entry.getEntryType(),
+                entry.getEntryScope(),
                 entry.getAmount(),
                 entry.getReference(),
                 entry.getDescription(),

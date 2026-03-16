@@ -1,11 +1,11 @@
 package com.vaultvibes.backend.invitations;
 
+import com.vaultvibes.backend.users.UserEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -19,23 +19,18 @@ public class InvitationEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "phone_number", nullable = false, length = 25)
-    private String phoneNumber;
-
-    @Column(name = "role", nullable = false, length = 40)
-    private String role = "MEMBER";
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserEntity user;
 
     @Column(name = "invited_by")
     private UUID invitedBy;
 
-    @Column(name = "share_units", nullable = false, precision = 19, scale = 4)
-    private BigDecimal shareUnits;
-
-    @Column(name = "price_per_unit", nullable = false, precision = 19, scale = 4)
-    private BigDecimal pricePerUnit;
-
     @Column(name = "status", nullable = false, length = 20)
     private String status = "PENDING";
+
+    @Column(name = "resent_at")
+    private OffsetDateTime resentAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -1,14 +1,21 @@
 package com.vaultvibes.backend.config;
 
-/**
- * Cognito SDK client configuration.
- *
- * The backend no longer calls Cognito APIs directly — Cognito manages user
- * authentication and invitations autonomously. Account linking (sub → DB user)
- * happens via JWT claims in UserService.getCurrentUser().
- *
- * This class is intentionally not annotated with @Configuration.
- * Remove this file and the AWS Cognito SDK dependency once the project is cleaned up.
- */
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
+
+@Configuration
 public class CognitoConfig {
+
+    @Value("${cognito.region}")
+    private String region;
+
+    @Bean
+    public CognitoIdentityProviderClient cognitoClient() {
+        return CognitoIdentityProviderClient.builder()
+                .region(Region.of(region))
+                .build();
+    }
 }

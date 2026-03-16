@@ -25,6 +25,11 @@ public record DashboardSummaryDTO(
         BigDecimal sharesAvailable,
         BigDecimal pricePerShare,
 
+        // Cycle info
+        BigDecimal monthlyContribution,
+        int cycleMonths,
+        BigDecimal expectedToDate,
+
         // Group info
         int totalMembers,
         String yearEnd,
