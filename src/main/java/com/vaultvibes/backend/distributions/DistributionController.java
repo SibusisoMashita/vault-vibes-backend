@@ -1,5 +1,7 @@
 package com.vaultvibes.backend.distributions;
 
+import com.vaultvibes.backend.auth.Permission;
+import com.vaultvibes.backend.auth.PermissionService;
 import com.vaultvibes.backend.distributions.dto.DistributionDTO;
 import com.vaultvibes.backend.distributions.dto.DistributionRequestDTO;
 import jakarta.validation.Valid;
@@ -15,6 +17,7 @@ import java.util.List;
 public class DistributionController {
 
     private final DistributionService distributionService;
+    private final PermissionService permissionService;
 
     @GetMapping
     public List<DistributionDTO> list() {
@@ -23,10 +26,12 @@ public class DistributionController {
 
     /**
      * Records a distribution payout for a member and fires a WhatsApp notification.
+     * Requires MANAGE_SHARES — restricted to TREASURER, CHAIRPERSON, and ADMIN.
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public DistributionDTO execute(@Valid @RequestBody DistributionRequestDTO request) {
+        permissionService.require(Permission.MANAGE_SHARES);
         return distributionService.execute(
                 request.userId(),
                 request.amount(),

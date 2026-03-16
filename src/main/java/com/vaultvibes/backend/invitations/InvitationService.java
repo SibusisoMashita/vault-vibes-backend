@@ -124,6 +124,31 @@ public class InvitationService {
         return toDTO(saved);
     }
 
+    @Transactional
+    public void deleteInvitation(UUID id) {
+        InvitationEntity invitation = invitationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invitation not found: " + id));
+        invitationRepository.delete(invitation);
+        log.info("Invitation deleted id={} phone={}", invitation.getId(), invitation.getPhoneNumber());
+    }
+
+    @Transactional
+    public InvitationDTO resendInvitation(UUID id) {
+        InvitationEntity invitation = invitationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invitation not found: " + id));
+
+        if (!"PENDING".equals(invitation.getStatus())) {
+            throw new IllegalStateException(
+                    "Cannot resend invitation with status " + invitation.getStatus());
+        }
+
+        // Cognito handles sending the SMS — log the resend request
+        log.info("Resend requested for invitation id={} phone={}",
+                invitation.getId(), invitation.getPhoneNumber());
+
+        return toDTO(invitation);
+    }
+
     private UUID resolveInviterId() {
         String cognitoId = currentUserService.getCurrentUserId();
         if (cognitoId == null) return null;

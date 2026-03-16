@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/invitations")
@@ -29,5 +30,18 @@ public class InvitationController {
     public InvitationDTO create(@Valid @RequestBody InvitationRequestDTO request) {
         permissionService.require(Permission.INVITE_MEMBER);
         return invitationService.createInvitation(request.phoneNumber(), request.role(), request.shareUnits());
+    }
+
+    @PostMapping("/{id}/resend")
+    public InvitationDTO resend(@PathVariable UUID id) {
+        permissionService.require(Permission.INVITE_MEMBER);
+        return invitationService.resendInvitation(id);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id) {
+        permissionService.require(Permission.INVITE_MEMBER);
+        invitationService.deleteInvitation(id);
     }
 }

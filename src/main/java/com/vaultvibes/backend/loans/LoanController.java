@@ -4,6 +4,8 @@ import com.vaultvibes.backend.auth.Permission;
 import com.vaultvibes.backend.auth.PermissionService;
 import com.vaultvibes.backend.loans.dto.LoanDTO;
 import com.vaultvibes.backend.loans.dto.LoanRequestDTO;
+import com.vaultvibes.backend.users.UserEntity;
+import com.vaultvibes.backend.users.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -22,11 +24,16 @@ public class LoanController {
 
     private final LoanService loanService;
     private final PermissionService permissionService;
+    private final UserService userService;
 
     @GetMapping
-    @Operation(summary = "List all borrowing records")
+    @Operation(summary = "List borrowing records — admins see all members, members see only their own")
     public List<LoanDTO> list() {
-        return loanService.listAll();
+        if (permissionService.currentUserHas(Permission.ISSUE_LOAN)) {
+            return loanService.listAll();
+        }
+        UserEntity currentUser = userService.getCurrentUser();
+        return loanService.listForUser(currentUser.getId());
     }
 
     @PostMapping("/request")

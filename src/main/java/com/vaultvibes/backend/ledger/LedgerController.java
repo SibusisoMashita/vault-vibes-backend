@@ -4,6 +4,8 @@ import com.vaultvibes.backend.auth.Permission;
 import com.vaultvibes.backend.auth.PermissionService;
 import com.vaultvibes.backend.ledger.dto.BankInterestRequestDTO;
 import com.vaultvibes.backend.ledger.dto.LedgerEntryDTO;
+import com.vaultvibes.backend.users.UserEntity;
+import com.vaultvibes.backend.users.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,11 +23,16 @@ public class LedgerController {
 
     private final LedgerService ledgerService;
     private final PermissionService permissionService;
+    private final UserService userService;
 
     @GetMapping
-    @Operation(summary = "List all ledger entries")
+    @Operation(summary = "List ledger entries — admins see all entries, members see only their own")
     public List<LedgerEntryDTO> list() {
-        return ledgerService.listAll();
+        if (permissionService.currentUserHas(Permission.AUDIT_LEDGER)) {
+            return ledgerService.listAll();
+        }
+        UserEntity currentUser = userService.getCurrentUser();
+        return ledgerService.listForUser(currentUser.getId());
     }
 
     @PostMapping("/bank-interest")

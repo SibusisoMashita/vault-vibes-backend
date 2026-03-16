@@ -29,4 +29,13 @@ public class PermissionService {
                     "Role " + user.getRole() + " does not have permission: " + permission.name());
         }
     }
+
+    /**
+     * Returns true if the current user holds the requested permission, false otherwise.
+     * Use this for conditional branching (e.g. data scoping) rather than hard rejection.
+     */
+    public boolean currentUserHas(Permission permission) {
+        UserEntity user = userService.getCurrentUser();
+        return RolePermissions.hasPermission(user.getRole(), permission);
+    }
 }

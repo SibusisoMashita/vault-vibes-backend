@@ -4,6 +4,7 @@ import com.vaultvibes.backend.auth.Permission;
 import com.vaultvibes.backend.auth.PermissionService;
 import com.vaultvibes.backend.config.ProofSignedUrlService;
 import com.vaultvibes.backend.config.S3UploadService;
+import com.vaultvibes.backend.exception.UserForbiddenException;
 import com.vaultvibes.backend.contributions.dto.ContributionDTO;
 import com.vaultvibes.backend.contributions.dto.ContributionPreviewDTO;
 import com.vaultvibes.backend.contributions.dto.ContributionProofInfoDTO;
@@ -41,16 +42,26 @@ public class ContributionController {
     private final UserService userService;
 
     @GetMapping
-    @Operation(summary = "List all contributions across all members")
+    @Operation(summary = "List contributions — admins see all members, members see only their own")
     @ApiResponse(responseCode = "200", description = "Contribution list returned")
     public List<ContributionDTO> list() {
-        return contributionService.listAll();
+        if (permissionService.currentUserHas(Permission.VERIFY_CONTRIBUTION)) {
+            return contributionService.listAll();
+        }
+        UserEntity currentUser = userService.getCurrentUser();
+        return contributionService.listForUser(currentUser.getId());
     }
 
     @GetMapping("/preview/{userId}")
     @Operation(summary = "Get payment breakdown for a user's next contribution",
-               description = "Returns contribution amount (shares × share price), active loan outstanding, and total due. Does not create any records.")
+               description = "Returns contribution amount (shares × share price), active loan outstanding, and total due. Does not create any records. " +
+                       "Members may only preview their own data. Admins may preview any member.")
+    @ApiResponse(responseCode = "403", description = "Not authorised to preview this user's data")
     public ContributionPreviewDTO preview(@PathVariable UUID userId) {
+        UserEntity caller = userService.getCurrentUser();
+        if (!caller.getId().equals(userId) && !permissionService.currentUserHas(Permission.VERIFY_CONTRIBUTION)) {
+            throw new UserForbiddenException("Access denied — you may only preview your own contribution data.");
+        }
         return contributionService.getPreview(userId);
     }
 
@@ -82,15 +93,22 @@ public class ContributionController {
     @Operation(summary = "Record a monthly contribution with proof of payment",
                description = "Accepts multipart/form-data. An optional proof-of-payment file " +
                        "(PDF, JPG, JPEG or PNG, max 5 MB) is uploaded to private S3 storage. " +
-                       "Contributions with proof start in PENDING status until an admin verifies.")
+                       "Contributions with proof start in PENDING status until an admin verifies. " +
+                       "Members may only submit contributions for themselves. Admins may submit for any member.")
     @ApiResponse(responseCode = "201", description = "Contribution recorded")
     @ApiResponse(responseCode = "400", description = "Invalid file type, file too large, or validation error")
+    @ApiResponse(responseCode = "403", description = "Not authorised to submit on behalf of another member")
     public ContributionDTO createWithProof(
             @RequestParam UUID userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate contributionDate,
             @RequestParam(required = false) String notes,
             @RequestPart(name = "proofFile", required = false) MultipartFile proofFile
     ) {
+        UserEntity caller = userService.getCurrentUser();
+        if (!caller.getId().equals(userId) && !permissionService.currentUserHas(Permission.VERIFY_CONTRIBUTION)) {
+            throw new UserForbiddenException("You may only submit contributions for yourself.");
+        }
+
         String proofS3Key    = null;
         String proofFileType = null;
 
