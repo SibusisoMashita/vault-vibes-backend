@@ -9,6 +9,7 @@ public record LedgerEntryDTO(
         UUID userId,
         String memberName,
         String entryType,
+        String entryScope,
         BigDecimal amount,
         String reference,
         String description,

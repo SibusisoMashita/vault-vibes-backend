@@ -34,7 +34,6 @@ public class DistributionService {
     }
 
     public List<DistributionDTO> listForUser(UUID userId) {
-        log.info("Fetching distributions for user {}", userId);
         return distributionRepository.findByUserIdOrderByDistributedAtDesc(userId).stream()
                 .map(this::toDTO)
                 .toList();

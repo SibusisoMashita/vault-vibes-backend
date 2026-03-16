@@ -37,6 +37,15 @@ public class UserEntity {
     @Column(name = "role", nullable = false, length = 40)
     private String role = "MEMBER";
 
+    @Column(name = "onboarding_completed", nullable = false)
+    private boolean onboardingCompleted = false;
+
+    @Column(name = "onboarding_completed_at")
+    private OffsetDateTime onboardingCompletedAt;
+
+    @Column(name = "onboarding_version", nullable = false)
+    private int onboardingVersion = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

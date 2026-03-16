@@ -60,6 +60,15 @@ public class UserController {
         return userService.updateStatus(id, status.toUpperCase());
     }
 
+    @PatchMapping("/me/onboarding-complete")
+    @Operation(summary = "Mark the current user's onboarding wizard as completed",
+               description = "Idempotent. Accepts {\"version\": 1}. Only updates the DB on the first call; re-launching the tour from Help does not call this endpoint.")
+    public MemberDTO completeOnboarding(@RequestBody Map<String, Integer> body) {
+        UserEntity user = userService.getCurrentUser();
+        int version = body.getOrDefault("version", 1);
+        return userService.completeOnboarding(user, version);
+    }
+
     @PatchMapping("/{id}/role")
     @Operation(summary = "Change a user's role (MEMBER, TREASURER, CHAIRPERSON, ADMIN)",
                description = "Admin-only operation. Accepts {\"role\": \"MEMBER\"}")

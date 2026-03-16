@@ -27,11 +27,21 @@ public class CurrentUserService {
     }
 
     /**
-     * Returns the phone_number claim from the JWT — used to resolve the DB user record.
+     * Returns the phone_number claim from the JWT if present.
+     * Not always included in Cognito access tokens — use getCurrentUsername() as fallback.
      */
     public String getCurrentPhoneNumber() {
         Jwt jwt = extractJwt();
         return jwt != null ? jwt.getClaimAsString("phone_number") : null;
+    }
+
+    /**
+     * Returns the Cognito username claim from the JWT.
+     * Always present in Cognito access tokens.
+     */
+    public String getCurrentUsername() {
+        Jwt jwt = extractJwt();
+        return jwt != null ? jwt.getClaimAsString("username") : null;
     }
 
     /**

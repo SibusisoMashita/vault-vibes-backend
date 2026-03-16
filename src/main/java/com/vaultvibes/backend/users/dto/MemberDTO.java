@@ -13,5 +13,7 @@ public record MemberDTO(
         BigDecimal sharesOwned,
         BigDecimal totalCommitment,
         BigDecimal paidSoFar,
-        BigDecimal remaining
+        BigDecimal remaining,
+        boolean onboardingCompleted,
+        int onboardingVersion
 ) {}

@@ -18,9 +18,6 @@ public interface LoanRepository extends JpaRepository<LoanEntity, UUID> {
 
     List<LoanEntity> findByStatusIn(List<String> statuses);
 
-    @Query("SELECT COALESCE(SUM(l.principalAmount), 0) FROM LoanEntity l WHERE l.status IN ('ACTIVE', 'APPROVED')")
-    BigDecimal sumActiveLoansValue();
-
     /**
      * Outstanding loan balance = money currently lent out that still belongs to the pool.
      * Uses principal - amount_repaid to correctly handle partial repayments.

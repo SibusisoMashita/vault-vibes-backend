@@ -61,6 +61,9 @@ notifications:
     phone-id: ${WHATSAPP_PHONE_ID:}
     token: ${WHATSAPP_TOKEN:}
 
+winsms:
+  api-key: ${WINSMS_API_KEY:}
+
 app:
   cors:
     allowed-origins:

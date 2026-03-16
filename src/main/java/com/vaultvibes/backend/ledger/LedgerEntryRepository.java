@@ -15,9 +15,6 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntryEntity, 
 
     List<LedgerEntryEntity> findAllByOrderByPostedAtDesc();
 
-    @Query("SELECT COALESCE(SUM(e.amount), 0) FROM LedgerEntryEntity e WHERE e.entryType = 'BANK_INTEREST'")
-    BigDecimal sumBankInterest();
-
     /**
      * Bank interest received on or after the given date — used to compute the
      * rolling average for bank interest projections.

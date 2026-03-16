@@ -47,6 +47,15 @@ public class ConfigController {
         if (body.containsKey("sharePrice")) {
             cfg.setSharePrice(new BigDecimal(body.get("sharePrice").toString()));
         }
+        if (body.containsKey("cycleMonths")) {
+            cfg.setCycleMonths(Integer.parseInt(body.get("cycleMonths").toString()));
+        }
+        if (body.containsKey("monthlyContribution")) {
+            cfg.setMonthlyContribution(new BigDecimal(body.get("monthlyContribution").toString()));
+        }
+        if (body.containsKey("cycleStartDate")) {
+            cfg.setCycleStartDate(java.time.LocalDate.parse(body.get("cycleStartDate").toString()));
+        }
         return stokvelConfigRepository.save(cfg);
     }
 
