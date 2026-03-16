@@ -10,3 +10,7 @@ spring:
     default-schema: public
     schemas: public
 
+app:
+  cors:
+    allowed-origins: https://vaultvibes.co.za
+

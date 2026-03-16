@@ -17,6 +17,14 @@
           "protocol": "tcp"
         }
       ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "stopTimeout": 60,
       "environment": [
         {
           "name": "SPRING_PROFILES_ACTIVE",
