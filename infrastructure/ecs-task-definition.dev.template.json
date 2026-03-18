@@ -1,0 +1,82 @@
+{
+  "family": "vault-dev-backend-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "__ECS_EXECUTION_ROLE_ARN__",
+  "taskRoleArn": "__ECS_TASK_ROLE_ARN__",
+  "containerDefinitions": [
+    {
+      "name": "vault-backend",
+      "image": "__IMAGE_URI__",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"],
+        "interval": 15,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 90
+      },
+      "stopTimeout": 60,
+      "environment": [
+        {
+          "name": "SPRING_PROFILES_ACTIVE",
+          "value": "dev"
+        },
+        {
+          "name": "COGNITO_ISSUER_URI",
+          "value": "__COGNITO_ISSUER_URI__"
+        },
+        {
+          "name": "COGNITO_USER_POOL_ID",
+          "value": "__COGNITO_USER_POOL_ID__"
+        },
+        {
+          "name": "COGNITO_CLIENT_ID",
+          "value": "__COGNITO_CLIENT_ID__"
+        },
+        {
+          "name": "EVENTBRIDGE_BUS_NAME",
+          "value": "vault-vibes-dev-events"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DB_URL",
+          "valueFrom": "__DB_SECRET_ARN__:DB_URL::"
+        },
+        {
+          "name": "DB_USERNAME",
+          "valueFrom": "__DB_SECRET_ARN__:DB_USERNAME::"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "__DB_SECRET_ARN__:DB_PASSWORD::"
+        },
+        {
+          "name": "S3_BUCKET",
+          "valueFrom": "__APP_SECRET_ARN__:S3_BUCKET::"
+        },
+        {
+          "name": "APP_ENV",
+          "valueFrom": "__APP_SECRET_ARN__:APP_ENV::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "__LOG_GROUP__",
+          "awslogs-region": "__AWS_REGION__",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
