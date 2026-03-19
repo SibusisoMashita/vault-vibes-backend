@@ -1,0 +1,39 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://prod-omnisolve-postgres.cmrg4wcome3h.us-east-1.rds.amazonaws.com:5432/vaultvibes_dev}
+    username: ${DB_USERNAME:vaultvibes_dev_app}
+    password: ${DB_PASSWORD}
+  flyway:
+    default-schema: public
+    schemas: public
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Replaced at deploy time once DEV Cognito pool ID is known
+          issuer-uri: ${COGNITO_ISSUER_URI}
+
+cognito:
+  user-pool-id: ${COGNITO_USER_POOL_ID}
+  region: us-east-1
+  client-id: ${COGNITO_CLIENT_ID}
+
+aws:
+  region: us-east-1
+  s3:
+    bucket: ${S3_BUCKET:vault-vibes-dev-uploads}
+
+notifications:
+  eventbridge:
+    bus-name: ${EVENTBRIDGE_BUS_NAME:vault-vibes-dev-events}
+    source: vaultvibes.finance
+
+app:
+  cors:
+    allowed-origins:
+      - https://dev.vaultvibes.co.za
+      - http://localhost:5173
+      - http://localhost:3000

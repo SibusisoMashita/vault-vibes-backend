@@ -75,12 +75,22 @@ public class InvitationService {
                 throw new IllegalStateException(
                         "A user with phone number " + phoneNumber + " is already an active member.");
             }
-            // PENDING user — resend their active invitation
+            // PENDING user — resend their active invitation if one exists, or create a
+            // fresh invitation if the previous one was deleted. This handles the case where
+            // an admin deletes an invitation but the PENDING user record remains in the DB.
             InvitationEntity activeInvite = invitationRepository
                     .findFirstByUserAndStatusIn(user, List.of("PENDING", "SENT"))
-                    .orElseThrow(() -> new IllegalStateException(
-                            "No active invitation found for existing PENDING user " + phoneNumber));
-            return resendInvitation(activeInvite.getId());
+                    .orElse(null);
+            if (activeInvite != null) {
+                return resendInvitation(activeInvite.getId());
+            }
+            log.info("PENDING user {} has no active invitation (previous was deleted) — creating a new one", phoneNumber);
+            UUID invitedBy = resolveInviterId();
+            InvitationEntity freshInvite = new InvitationEntity();
+            freshInvite.setUser(user);
+            freshInvite.setInvitedBy(invitedBy);
+            InvitationEntity savedFresh = invitationRepository.save(freshInvite);
+            return resendInvitation(savedFresh.getId());
         }
 
         UUID invitedBy = resolveInviterId();
