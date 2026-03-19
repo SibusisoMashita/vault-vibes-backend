@@ -27,10 +27,10 @@ provider "aws" {
   }
 }
 
-# ─── PROD Resources (import-ready) ────────────────────────────────────────────
-# All resources in this file correspond to existing AWS infrastructure.
-# Run import.sh to import them before running terraform plan/apply.
-# After import, Terraform manages configuration drift only.
+# ─── PROD Resources ───────────────────────────────────────────────────────────
+# Most resources correspond to existing AWS infrastructure — run import.sh first.
+# Exception: aws_iam_role.prod_github_frontend_deploy is a NEW resource;
+# Terraform will create it on first apply (no import needed).
 
 # ─── Networking ───────────────────────────────────────────────────────────────
 
@@ -357,6 +357,62 @@ resource "aws_iam_role_policy" "prod_github_inline" {
         Action = ["iam:PassRole"]
         Resource = "arn:aws:iam::861870144419:role/*"
         Condition = { StringEquals = { "iam:PassedToService" = "ecs-tasks.amazonaws.com" } }
+      }
+    ]
+  })
+}
+
+# ─── IAM: GitHub Frontend Deploy Role ────────────────────────────────────────
+
+resource "aws_iam_role" "prod_github_frontend_deploy" {
+  name = "vaultvibes-prod-frontend-github-deploy-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = "arn:aws:iam::861870144419:oidc-provider/token.actions.githubusercontent.com" }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
+        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:SibusisoMashita/vault-vibes-frontend:*" }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "prod_github_frontend_inline" {
+  name = "vaultvibes-prod-github-frontend-inline"
+  role = aws_iam_role.prod_github_frontend_deploy.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "S3Deploy"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+        ]
+        Resource = [
+          "arn:aws:s3:::vaultvibes-frontend",
+          "arn:aws:s3:::vaultvibes-frontend/*",
+        ]
+      },
+      {
+        Sid      = "CloudFrontInvalidate"
+        Effect   = "Allow"
+        Action   = ["cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"]
+        Resource = "arn:aws:cloudfront::861870144419:distribution/E2LTR00BB2MIAY"
+      },
+      {
+        Sid      = "S3HeadObject"
+        Effect   = "Allow"
+        Action   = ["s3:GetBucketLocation"]
+        Resource = "arn:aws:s3:::vaultvibes-frontend"
       }
     ]
   })
