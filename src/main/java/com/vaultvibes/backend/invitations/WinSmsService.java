@@ -41,14 +41,13 @@ public class WinSmsService {
      * @param username    Cognito username (e.g. "JohnSmith")
      * @param password    Temporary password to include in the message
      */
-    public void sendInvite(String phoneNumber, String username, String password) {
+    public boolean sendInvite(String phoneNumber, String username, String password) {
         String message = String.format(
-                "You're in! Welcome to Vault Vibes — your group savings, sorted.%n%n" +
+                "Welcome to Vault Vibes!%n" +
                 "Username: %s%n" +
-                "Password: %s%n%n" +
-                "Login now and change your password:%n" +
-                "%s%n%n" +
-                "— The Vault Vibes Team",
+                "Password: %s%n" +
+                "Login: %s%n" +
+                "Change your password after first login.",
                 username, password, frontendUrl);
 
         HttpHeaders headers = new HttpHeaders();
@@ -57,6 +56,7 @@ public class WinSmsService {
 
         Map<String, Object> body = Map.of(
                 "message", message,
+                "maxSegments", 2,
                 "recipients", List.of(Map.of("mobileNumber", phoneNumber)));
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
@@ -64,9 +64,10 @@ public class WinSmsService {
         try {
             restTemplate.postForObject(WINSMS_URL, request, String.class);
             log.info("WinSMS invite sent to phone={}", phoneNumber);
+            return true;
         } catch (Exception e) {
             log.error("WinSMS delivery failed for phone={}: {}", phoneNumber, e.getMessage());
-            throw new IllegalStateException("Failed to send SMS invite to " + phoneNumber, e);
+            return false;
         }
     }
 }

@@ -141,7 +141,10 @@ public class InvitationService {
             log.info("Stored cognito_id={} for user id={}", cognitoSub, savedUser.getId());
         }
 
-        winSmsService.sendInvite(phoneNumber, cognitoUsername, tempPassword);
+        boolean smsSent = winSmsService.sendInvite(phoneNumber, cognitoUsername, tempPassword);
+        if (!smsSent) {
+            log.warn("SMS delivery failed for invitation user={} phone={} — invitation still created, admin can resend", savedUser.getId(), phoneNumber);
+        }
 
         savedInvite.setStatus("SENT");
         savedInvite = invitationRepository.save(savedInvite);
@@ -182,7 +185,10 @@ public class InvitationService {
             cognitoUsername = derived;
         }
 
-        winSmsService.sendInvite(phoneNumber, cognitoUsername, tempPassword);
+        boolean smsSent = winSmsService.sendInvite(phoneNumber, cognitoUsername, tempPassword);
+        if (!smsSent) {
+            log.warn("SMS delivery failed on resend for user={} phone={}", user.getId(), phoneNumber);
+        }
 
         invitation.setResentAt(OffsetDateTime.now());
         invitation.setStatus("SENT");
