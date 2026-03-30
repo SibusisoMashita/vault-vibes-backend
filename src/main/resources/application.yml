@@ -65,7 +65,7 @@ winsms:
   api-key: ${WINSMS_API_KEY:F13ABF12-BEE6-4A45-B0D9-BA58309B53A1}
 
 app:
-  frontend-url: https://app.vaultvibes.com
+  frontend-url: https://vaultvibes.co.za
   cors:
     allowed-origins:
       - https://vaultvibes.co.za

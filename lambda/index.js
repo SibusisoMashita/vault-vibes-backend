@@ -15,14 +15,14 @@
  * Required environment variables:
  *   WHATSAPP_TOKEN    — Meta Cloud API bearer token
  *   WHATSAPP_PHONE_ID — WhatsApp Business phone number ID
- *   FRONTEND_URL      — e.g. https://app.vaultvibes.com
+ *   FRONTEND_URL      — e.g. https://vaultvibes.co.za
  */
 
 const https = require('https');
 
 const WHATSAPP_TOKEN    = process.env.WHATSAPP_TOKEN;
 const WHATSAPP_PHONE_ID = process.env.WHATSAPP_PHONE_ID;
-const FRONTEND_URL      = process.env.FRONTEND_URL || 'https://app.vaultvibes.com';
+const FRONTEND_URL      = process.env.FRONTEND_URL || 'https://vaultvibes.co.za';
 const GRAPH_API_VERSION = 'v19.0';
 
 // ---------------------------------------------------------------------------
