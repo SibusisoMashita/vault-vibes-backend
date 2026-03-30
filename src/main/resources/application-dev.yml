@@ -32,6 +32,7 @@ notifications:
     source: vaultvibes.finance
 
 app:
+  frontend-url: https://dev.vaultvibes.co.za
   cors:
     allowed-origins:
       - https://dev.vaultvibes.co.za

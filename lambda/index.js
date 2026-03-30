@@ -9,16 +9,20 @@
  *   LOAN_ISSUED
  *   CONTRIBUTION_OVERDUE
  *   DISTRIBUTION_EXECUTED
+ *   MEMBER_INVITED
+ *   ROLE_UPDATED
  *
  * Required environment variables:
  *   WHATSAPP_TOKEN    — Meta Cloud API bearer token
  *   WHATSAPP_PHONE_ID — WhatsApp Business phone number ID
+ *   FRONTEND_URL      — e.g. https://app.vaultvibes.com
  */
 
 const https = require('https');
 
 const WHATSAPP_TOKEN    = process.env.WHATSAPP_TOKEN;
 const WHATSAPP_PHONE_ID = process.env.WHATSAPP_PHONE_ID;
+const FRONTEND_URL      = process.env.FRONTEND_URL || 'https://app.vaultvibes.com';
 const GRAPH_API_VERSION = 'v19.0';
 
 // ---------------------------------------------------------------------------
@@ -31,19 +35,25 @@ function buildMessage(detailType, detail) {
 
   switch (detailType) {
     case 'LOAN_APPROVED':
-      return `✅ *Vault Vibes* — Your loan of ${amount} has been *approved*. Funds will be issued shortly.`;
+      return `✅ *Vault Vibes* — Great news! Your loan of ${amount} has been *approved*. Funds will be issued to you shortly. 💪`;
 
     case 'LOAN_ISSUED':
-      return `💸 *Vault Vibes* — Your loan of ${amount} has been *issued*. Please repay by month end.`;
+      return `💸 *Vault Vibes* — Your ${amount} loan has been *disbursed*! Full repayment is due by end of month — stay on track and keep the vault strong. 🔐`;
 
     case 'CONTRIBUTION_OVERDUE':
-      return `⚠️ *Vault Vibes* — Your monthly contribution of ${amount} is *overdue*. Please pay as soon as possible.`;
+      return `⏰ *Vault Vibes* — Heads up! Your monthly contribution of ${amount} is *overdue*. Please pay as soon as possible to keep the group moving. Every rand counts! 💛`;
 
     case 'DISTRIBUTION_EXECUTED':
-      return `🎉 *Vault Vibes* — A distribution of ${amount} has been *paid out* to your account.`;
+      return `🎉 *Vault Vibes* — Payday! ${amount} has been *distributed* to your account. Your stokvel is working for you — enjoy! 🙌`;
+
+    case 'MEMBER_INVITED':
+      return `👋 *Vault Vibes* — You've been invited to join the stokvel! Check your SMS for your login details and get started:\n${FRONTEND_URL}`;
+
+    case 'ROLE_UPDATED':
+      return `🔑 *Vault Vibes* — Your role in the stokvel has been *updated*. Log in to see your new access:\n${FRONTEND_URL}`;
 
     default:
-      return `📣 *Vault Vibes* — You have a new notification: ${detailType}.`;
+      return `📣 *Vault Vibes* — You have a new notification. Log in to stay in the loop:\n${FRONTEND_URL}`;
   }
 }
 
@@ -111,6 +121,10 @@ exports.handler = async (event) => {
 
   if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_ID) {
     throw new Error('WHATSAPP_TOKEN and WHATSAPP_PHONE_ID environment variables must be set.');
+  }
+
+  if (!FRONTEND_URL) {
+    throw new Error('FRONTEND_URL environment variable must be set.');
   }
 
   const message = buildMessage(detailType, detail);

@@ -20,6 +20,7 @@ cognito:
   client-id: 28lsmakalo98o9p1uv3piho3pq
 
 app:
+  frontend-url: http://localhost:5173
   cors:
     allowed-origins:
       - http://localhost:5173

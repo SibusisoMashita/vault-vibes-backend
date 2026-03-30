@@ -11,6 +11,7 @@ spring:
     schemas: public
 
 app:
+  frontend-url: https://app.vaultvibes.com
   cors:
     allowed-origins:
       - https://vaultvibes.co.za

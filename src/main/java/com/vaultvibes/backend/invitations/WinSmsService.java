@@ -31,6 +31,9 @@ public class WinSmsService {
     @Value("${winsms.api-key}")
     private String apiKey;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
     /**
      * Sends the stokvel invitation SMS to the given phone number.
      *
@@ -40,11 +43,13 @@ public class WinSmsService {
      */
     public void sendInvite(String phoneNumber, String username, String password) {
         String message = String.format(
-                "Welcome to Vault Vibes.%n%n" +
+                "You're in! Welcome to Vault Vibes — your group savings, sorted.%n%n" +
                 "Username: %s%n" +
-                "Temporary Password: %s%n%n" +
-                "Please login and change your password immediately.",
-                username, password);
+                "Password: %s%n%n" +
+                "Login now and change your password:%n" +
+                "%s%n%n" +
+                "— The Vault Vibes Team",
+                username, password, frontendUrl);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
