@@ -11,6 +11,7 @@ import com.vaultvibes.backend.notifications.NotificationEventType;
 import com.vaultvibes.backend.shares.ShareRepository;
 import com.vaultvibes.backend.users.UserEntity;
 import com.vaultvibes.backend.users.UserRepository;
+import com.vaultvibes.backend.users.UserService;
 import com.vaultvibes.backend.util.FinanceUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,9 +39,11 @@ public class LoanService {
     private final ShareRepository shareRepository;
     private final StokvelConfigService configService;
     private final NotificationEventService notificationEventService;
+    private final UserService userService;
 
     public List<LoanDTO> listAll() {
-        return loanRepository.findAllByOrderByCreatedAtDesc().stream()
+        UUID stokvelId = userService.getCurrentUser().getStokvelId();
+        return loanRepository.findByStokvelIdOrderByCreatedAtDesc(stokvelId).stream()
                 .map(this::toDTO)
                 .toList();
     }
@@ -62,7 +65,7 @@ public class LoanService {
             throw new IllegalArgumentException("Your account is not yet active. Contact the treasurer.");
         }
 
-        BigDecimal configuredRate = configService.getInterestRate();
+        BigDecimal configuredRate = configService.getInterestRate(user.getStokvelId());
 
         // Member must own at least one share
         BigDecimal memberShares = shareRepository.sumShareUnitsByUserId(request.userId());
@@ -71,12 +74,12 @@ public class LoanService {
         }
 
         // Calculate pool and share values using centralized formulas
-        BigDecimal sharesSold       = shareRepository.sumAllShareUnits();
-        BigDecimal bankBalance      = ledgerEntryRepository.sumAllLedgerAmounts();
-        BigDecimal outstandingLoans = loanRepository.sumOutstandingLoansBalance();
+        BigDecimal sharesSold       = shareRepository.sumAllShareUnitsByStokvelId(user.getStokvelId());
+        BigDecimal bankBalance      = ledgerEntryRepository.sumAllLedgerAmountsByStokvelId(user.getStokvelId());
+        BigDecimal outstandingLoans = loanRepository.sumOutstandingLoansBalanceByStokvelId(user.getStokvelId());
         BigDecimal totalPoolValue   = FinanceUtil.calculatePoolValue(bankBalance, outstandingLoans);
         BigDecimal perShareValue    = FinanceUtil.calculateShareValue(
-                totalPoolValue, sharesSold, configService.getSharePrice());
+                totalPoolValue, sharesSold, configService.getSharePrice(user.getStokvelId()));
         BigDecimal memberShareValue = FinanceUtil.calculateMemberValue(memberShares, perShareValue);
 
         // Borrowing limits

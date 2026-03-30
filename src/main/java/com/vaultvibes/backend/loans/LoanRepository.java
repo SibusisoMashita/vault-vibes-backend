@@ -46,4 +46,18 @@ public interface LoanRepository extends JpaRepository<LoanEntity, UUID> {
                    "  AND DATE_TRUNC('month', issued_at) < DATE_TRUNC('month', NOW())",
            nativeQuery = true)
     long countCrossMonthActiveLoans(@Param("userId") UUID userId);
+
+    @Query("SELECT COALESCE(SUM(l.principalAmount - l.amountRepaid), 0) FROM LoanEntity l " +
+           "WHERE l.status IN ('ACTIVE', 'APPROVED') AND l.user.stokvelId = :stokvelId")
+    BigDecimal sumOutstandingLoansBalanceByStokvelId(@Param("stokvelId") UUID stokvelId);
+
+    @Query("SELECT COUNT(l) FROM LoanEntity l WHERE l.status IN ('ACTIVE', 'APPROVED') AND l.user.stokvelId = :stokvelId")
+    long countActiveLoansByStokvelId(@Param("stokvelId") UUID stokvelId);
+
+    @Query("SELECT l FROM LoanEntity l WHERE l.user.stokvelId = :stokvelId ORDER BY l.createdAt DESC")
+    List<LoanEntity> findByStokvelIdOrderByCreatedAtDesc(@Param("stokvelId") UUID stokvelId);
+
+    @Query("SELECT l FROM LoanEntity l WHERE l.status IN :statuses AND l.user.stokvelId = :stokvelId")
+    List<LoanEntity> findByStatusInAndStokvelId(@Param("statuses") List<String> statuses,
+                                                @Param("stokvelId") UUID stokvelId);
 }

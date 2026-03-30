@@ -94,6 +94,7 @@ public class InvitationService {
         }
 
         UUID invitedBy = resolveInviterId();
+        UUID stokvelId = resolveCurrentStokvelId();
 
         // Create the user first — they are PENDING until first login
         UserEntity newUser = new UserEntity();
@@ -101,6 +102,7 @@ public class InvitationService {
         newUser.setPhoneNumber(phoneNumber);
         newUser.setRole(role.toUpperCase());
         newUser.setStatus("PENDING");
+        newUser.setStokvelId(stokvelId);
         UserEntity savedUser = userRepository.save(newUser);
         log.info("Created PENDING user id={} phone={}", savedUser.getId(), phoneNumber);
 
@@ -307,6 +309,14 @@ public class InvitationService {
         if (cognitoId == null) return null;
         return userRepository.findByCognitoId(cognitoId)
                 .map(UserEntity::getId)
+                .orElse(null);
+    }
+
+    private UUID resolveCurrentStokvelId() {
+        String cognitoId = currentUserService.getCurrentUserId();
+        if (cognitoId == null) return null;
+        return userRepository.findByCognitoId(cognitoId)
+                .map(UserEntity::getStokvelId)
                 .orElse(null);
     }
 

@@ -21,10 +21,12 @@ public final class FinanceUtil {
     private FinanceUtil() {}
 
     /**
-     * Pool Value = liquidity (bank balance) + money currently lent out.
+     * Pool Value = bank balance (ledger sum).
+     * Outstanding loans are tracked separately for borrowing limits but are not
+     * added here — the pool reflects what is actually held in the bank account.
      */
     public static BigDecimal calculatePoolValue(BigDecimal bankBalance, BigDecimal outstandingLoans) {
-        return bankBalance.add(outstandingLoans);
+        return bankBalance;
     }
 
     /**

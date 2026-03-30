@@ -48,10 +48,13 @@ public class UserService {
      * Flow:
      *  1. Return cached user if already resolved this request (UserContextInterceptor).
      *  2. Look up by sub (cognito_id) — fast path once the user is linked.
-     *  3. Fallback: use Cognito username from the token to call adminGetUser and retrieve
-     *     the phone_number, then look up the DB user by phone and link the sub.
-     *     This path only runs on first login; afterwards step 2 hits immediately.
-     *  4. No match → 401 USER_NOT_REGISTERED.
+     *  3. Phone claim path — if the JWT contains a phone_number claim (Cognito can be
+     *     configured to include it), look up by phone and link/update the sub.
+     *     No AWS credentials required; runs when cognito_id is missing or has changed.
+     *  4. Cognito API fallback — use adminGetUser to fetch the phone from Cognito and
+     *     link the sub. Requires AWS credentials; only reached when the JWT has no
+     *     phone_number claim.
+     *  5. No match → 401 USER_NOT_REGISTERED.
      *
      * SUSPENDED → 403 USER_NOT_ACTIVE.
      */
@@ -75,15 +78,28 @@ public class UserService {
                     throw new UserNotActiveException("SUSPENDED");
                 }
                 if (!"ACTIVE".equals(user.getStatus())) {
-                    user.setStatus("ACTIVE");
-                    return userRepository.save(user);
+                    return linkCognitoAccount(user, cognitoId);
                 }
                 return user;
             }
         }
 
-        // 3. Sub not linked yet — use Cognito username to find the user's phone number,
-        //    then look up in the DB and link the sub. Runs once per user.
+        // 3. Phone claim path — JWT includes phone_number directly; no Cognito API needed.
+        //    Handles: cognito_id missing (seeded users), cognito_id changed (pool recreated).
+        String jwtPhone = currentUserService.getCurrentPhoneNumber();
+        if (jwtPhone != null) {
+            UserEntity byPhone = userRepository.findWithLockByPhoneNumber(jwtPhone).orElse(null);
+            if (byPhone != null) {
+                if ("SUSPENDED".equals(byPhone.getStatus())) {
+                    throw new UserNotActiveException("SUSPENDED");
+                }
+                return linkCognitoAccount(byPhone, cognitoId);
+            }
+        }
+
+        // 4. Cognito API fallback — use adminGetUser to fetch the phone from Cognito and
+        //    link the sub. Requires AWS credentials; only reached when the JWT has no
+        //    phone_number claim.
         if (cognitoUsername != null) {
             String phoneNumber = resolvePhoneFromCognito(cognitoUsername);
             if (phoneNumber != null) {
@@ -97,7 +113,7 @@ public class UserService {
             }
         }
 
-        // 4. No matching user — valid JWT but not registered in this application
+        // 5. No matching user — valid JWT but not registered in this application
         log.warn("AUTH_NOT_REGISTERED: cognito_id={} username={}", cognitoId, cognitoUsername);
         throw new UserNotRegisteredException();
     }
@@ -177,6 +193,7 @@ public class UserService {
                 user.getEmail(),
                 user.getRole().toLowerCase(),
                 user.getStatus(),
+                user.getStokvelId(),
                 sharesOwned,
                 totalCommitment,
                 paidSoFar,
@@ -187,7 +204,8 @@ public class UserService {
     }
 
     public List<MemberDTO> listMembers() {
-        return userRepository.findAll().stream()
+        UUID stokvelId = getCurrentUser().getStokvelId();
+        return userRepository.findByStokvelId(stokvelId).stream()
                 .map(this::toMemberDTO)
                 .toList();
     }

@@ -2,6 +2,7 @@ package com.vaultvibes.backend.shares;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -25,4 +26,10 @@ public interface ShareRepository extends JpaRepository<ShareEntity, UUID> {
 
     @Query("SELECT COALESCE(AVG(s.pricePerUnit), 0) FROM ShareEntity s")
     BigDecimal avgPricePerUnit();
+
+    @Query("SELECT COALESCE(SUM(s.shareUnits), 0) FROM ShareEntity s WHERE s.user.stokvelId = :stokvelId")
+    BigDecimal sumAllShareUnitsByStokvelId(@Param("stokvelId") UUID stokvelId);
+
+    @Query("SELECT COALESCE(AVG(s.pricePerUnit), 0) FROM ShareEntity s WHERE s.user.stokvelId = :stokvelId")
+    BigDecimal avgPricePerUnitByStokvelId(@Param("stokvelId") UUID stokvelId);
 }

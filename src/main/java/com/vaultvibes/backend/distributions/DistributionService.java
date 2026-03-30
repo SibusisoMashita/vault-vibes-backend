@@ -6,6 +6,7 @@ import com.vaultvibes.backend.notifications.NotificationEventService;
 import com.vaultvibes.backend.notifications.NotificationEventType;
 import com.vaultvibes.backend.users.UserEntity;
 import com.vaultvibes.backend.users.UserRepository;
+import com.vaultvibes.backend.users.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,9 +27,11 @@ public class DistributionService {
     private final DistributionRepository distributionRepository;
     private final UserRepository userRepository;
     private final NotificationEventService notificationEventService;
+    private final UserService userService;
 
     public List<DistributionDTO> listAll() {
-        return distributionRepository.findAllByOrderByDistributedAtDesc().stream()
+        UUID stokvelId = userService.getCurrentUser().getStokvelId();
+        return distributionRepository.findByStokvelIdOrderByDistributedAtDesc(stokvelId).stream()
                 .map(this::toDTO)
                 .toList();
     }

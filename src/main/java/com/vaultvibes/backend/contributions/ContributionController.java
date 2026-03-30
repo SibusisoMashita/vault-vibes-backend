@@ -21,9 +21,11 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -102,6 +104,7 @@ public class ContributionController {
             @RequestParam UUID userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate contributionDate,
             @RequestParam(required = false) String notes,
+            @RequestParam(required = false) BigDecimal amount,
             @RequestPart(name = "proofFile", required = false) MultipartFile proofFile
     ) {
         UserEntity caller = userService.getCurrentUser();
@@ -122,7 +125,7 @@ public class ContributionController {
         }
 
         ContributionRequestDTO request = new ContributionRequestDTO(
-                userId, contributionDate, notes, proofS3Key, proofFileType);
+                userId, contributionDate, notes, proofS3Key, proofFileType, amount);
 
         return contributionService.addContribution(request);
     }

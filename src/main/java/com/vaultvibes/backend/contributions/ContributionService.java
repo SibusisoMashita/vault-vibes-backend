@@ -15,6 +15,7 @@ import com.vaultvibes.backend.notifications.NotificationEventType;
 import com.vaultvibes.backend.shares.ShareRepository;
 import com.vaultvibes.backend.users.UserEntity;
 import com.vaultvibes.backend.users.UserRepository;
+import com.vaultvibes.backend.users.UserService;
 import com.vaultvibes.backend.util.FinanceUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,9 +42,11 @@ public class ContributionService {
     private final LoanRepository loanRepository;
     private final StokvelConfigService configService;
     private final NotificationEventService notificationEventService;
+    private final UserService userService;
 
     public List<ContributionDTO> listAll() {
-        return contributionRepository.findAllByOrderByContributionDateDesc().stream()
+        UUID stokvelId = userService.getCurrentUser().getStokvelId();
+        return contributionRepository.findByStokvelIdOrderByContributionDateDesc(stokvelId).stream()
                 .map(this::toDTO)
                 .toList();
     }
@@ -58,8 +61,11 @@ public class ContributionService {
      * Returns a payment breakdown for the given user without persisting anything.
      */
     public ContributionPreviewDTO getPreview(UUID userId) {
+        UUID stokvelId = userRepository.findById(userId)
+                .map(u -> u.getStokvelId())
+                .orElse(null);
         BigDecimal shareUnits         = shareRepository.sumShareUnitsByUserId(userId);
-        BigDecimal sharePrice         = configService.getSharePrice();
+        BigDecimal sharePrice         = configService.getSharePrice(stokvelId);
         BigDecimal contributionAmount = FinanceUtil.calculateContributionAmount(shareUnits, sharePrice);
 
         LocalDate today = LocalDate.now();
@@ -110,7 +116,7 @@ public class ContributionService {
         }
 
         BigDecimal shareUnits         = shareRepository.sumShareUnitsByUserId(request.userId());
-        BigDecimal sharePrice         = configService.getSharePrice();
+        BigDecimal sharePrice         = configService.getSharePrice(user.getStokvelId());
         BigDecimal contributionAmount = FinanceUtil.calculateContributionAmount(shareUnits, sharePrice);
 
         if (contributionAmount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -118,11 +124,34 @@ public class ContributionService {
                     "No shares found for user — contribution amount cannot be calculated.");
         }
 
-        log.info("CONTRIBUTION_RECEIVED: amount={} user={}", contributionAmount, user.getFullName());
+        // Maximum the member can submit is contribution + any active loan outstanding
+        Optional<LoanEntity> activeLoanForValidation = findActiveLoan(request.userId());
+        BigDecimal loanOutstandingForValidation = BigDecimal.ZERO;
+        if (activeLoanForValidation.isPresent()) {
+            LoanEntity l = activeLoanForValidation.get();
+            BigDecimal interest = FinanceUtil.calculateFlatInterest(l.getPrincipalAmount(), l.getInterestRate());
+            loanOutstandingForValidation = l.getPrincipalAmount().add(interest)
+                    .subtract(l.getAmountRepaid()).max(BigDecimal.ZERO);
+        }
+        BigDecimal maxAllowed = contributionAmount.add(loanOutstandingForValidation);
+
+        BigDecimal amountToRecord;
+        if (request.overrideAmount() != null) {
+            if (request.overrideAmount().compareTo(maxAllowed) > 0) {
+                throw new IllegalArgumentException(
+                        "Amount " + request.overrideAmount()
+                        + " exceeds maximum due of " + maxAllowed + ".");
+            }
+            amountToRecord = request.overrideAmount();
+        } else {
+            amountToRecord = contributionAmount;
+        }
+
+        log.info("CONTRIBUTION_RECEIVED: amount={} user={}", amountToRecord, user.getFullName());
 
         ContributionEntity contribution = new ContributionEntity();
         contribution.setUser(user);
-        contribution.setAmount(contributionAmount);
+        contribution.setAmount(amountToRecord);
         contribution.setContributionDate(date);
         contribution.setNotes(request.notes());
         contribution.setProofOfPaymentUrl(request.proofS3Key());
@@ -134,7 +163,7 @@ public class ContributionService {
 
         // Ledger: only post immediately if auto-verified (no proof required).
         if ("VERIFIED".equals(saved.getVerificationStatus())) {
-            writeContributionLedgerEntry(user, contributionAmount, date, saved.getId());
+            writeContributionLedgerEntry(user, amountToRecord, date, saved.getId());
         }
 
         // Loan repayment — settled atomically in the same transaction
@@ -218,7 +247,7 @@ public class ContributionService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
         BigDecimal shareUnits    = shareRepository.sumShareUnitsByUserId(userId);
-        BigDecimal sharePrice    = configService.getSharePrice();
+        BigDecimal sharePrice    = configService.getSharePrice(user.getStokvelId());
         BigDecimal overdueAmount = FinanceUtil.calculateContributionAmount(shareUnits, sharePrice);
 
         log.info("CONTRIBUTION_OVERDUE: user={} amount={}", userId, overdueAmount);
@@ -237,7 +266,7 @@ public class ContributionService {
         entry.setEntryScope("USER");
         entry.setAmount(amount);
         entry.setReference(contributionId.toString());
-        entry.setDescription("Member contribution — " + user.getFullName());
+        entry.setDescription("Member contribution - " + user.getFullName());
         entry.setPostedAt(date.atStartOfDay().atOffset(ZoneOffset.UTC));
         ledgerEntryRepository.save(entry);
     }

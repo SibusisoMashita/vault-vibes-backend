@@ -9,6 +9,15 @@ spring:
   flyway:
     default-schema: public
     schemas: public
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_gqGUV6CKU
+
+cognito:
+  user-pool-id: us-east-1_gqGUV6CKU
+  client-id: 28lsmakalo98o9p1uv3piho3pq
 
 app:
   cors:

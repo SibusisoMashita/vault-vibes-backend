@@ -2,6 +2,7 @@ package com.vaultvibes.backend.ledger;
 
 import com.vaultvibes.backend.ledger.dto.BankInterestRequestDTO;
 import com.vaultvibes.backend.ledger.dto.LedgerEntryDTO;
+import com.vaultvibes.backend.users.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,9 +19,11 @@ import java.util.UUID;
 public class LedgerService {
 
     private final LedgerEntryRepository ledgerEntryRepository;
+    private final UserService userService;
 
     public List<LedgerEntryDTO> listAll() {
-        return ledgerEntryRepository.findAllByOrderByPostedAtDesc().stream()
+        UUID stokvelId = userService.getCurrentUser().getStokvelId();
+        return ledgerEntryRepository.findByStokvelIdOrderByPostedAtDesc(stokvelId).stream()
                 .map(this::toDTO)
                 .toList();
     }
@@ -33,10 +36,12 @@ public class LedgerService {
 
     @Transactional
     public LedgerEntryDTO recordBankInterest(BankInterestRequestDTO request) {
+        UUID stokvelId = userService.getCurrentUser().getStokvelId();
         LedgerEntryEntity entry = new LedgerEntryEntity();
         entry.setUser(null);   // pool-level income — not tied to any member
         entry.setEntryType("BANK_INTEREST");
         entry.setEntryScope("SYSTEM");
+        entry.setStokvelId(stokvelId);
         entry.setAmount(request.amount());
         entry.setReference(request.reference());
         entry.setDescription(request.description());

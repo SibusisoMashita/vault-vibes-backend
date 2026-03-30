@@ -25,6 +25,7 @@ public enum Permission {
     VIEW_FINANCIAL_REPORTS,
     AUDIT_LEDGER,
 
-    // ── System administration (future) ────────────────────────────────────────
+    // ── System administration ─────────────────────────────────────────────────
+    MANAGE_STOKVELS,
     SYSTEM_ADMIN,
 }

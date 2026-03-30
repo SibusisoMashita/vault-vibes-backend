@@ -37,6 +37,9 @@ public class UserEntity {
     @Column(name = "role", nullable = false, length = 40)
     private String role = "MEMBER";
 
+    @Column(name = "stokvel_id")
+    private UUID stokvelId;
+
     @Column(name = "onboarding_completed", nullable = false)
     private boolean onboardingCompleted = false;
 

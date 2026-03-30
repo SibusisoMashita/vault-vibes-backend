@@ -31,4 +31,10 @@ public interface ContributionRepository extends JpaRepository<ContributionEntity
      */
     @Query(value = "SELECT COUNT(*) FROM contributions WHERE user_id = :userId AND contribution_year_month(contribution_date) = :yearMonth AND verification_status <> 'REJECTED'", nativeQuery = true)
     long countByUserIdAndYearMonth(@Param("userId") UUID userId, @Param("yearMonth") int yearMonth);
+
+    @Query("SELECT c FROM ContributionEntity c WHERE c.user.stokvelId = :stokvelId ORDER BY c.contributionDate DESC")
+    List<ContributionEntity> findByStokvelIdOrderByContributionDateDesc(@Param("stokvelId") UUID stokvelId);
+
+    @Query("SELECT COALESCE(SUM(c.amount), 0) FROM ContributionEntity c WHERE c.user.stokvelId = :stokvelId AND c.verificationStatus = 'VERIFIED'")
+    BigDecimal sumAllAmountsByStokvelId(@Param("stokvelId") UUID stokvelId);
 }

@@ -22,6 +22,9 @@ public class BorrowingConfigEntity {
     @Column(name = "interest_rate", nullable = false, precision = 5, scale = 2)
     private BigDecimal interestRate = new BigDecimal("20.00");
 
+    @Column(name = "stokvel_id")
+    private UUID stokvelId;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;

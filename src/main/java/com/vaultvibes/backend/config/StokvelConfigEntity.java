@@ -29,11 +29,18 @@ public class StokvelConfigEntity {
     @Column(name = "cycle_months", nullable = false)
     private int cycleMonths = 12;
 
+    /** Months per year when contributions are expected (≤ cycleMonths). Set to 11 to skip December. */
+    @Column(name = "contribution_months", nullable = false)
+    private int contributionMonths = 12;
+
     @Column(name = "monthly_contribution", nullable = false, precision = 19, scale = 2)
     private BigDecimal monthlyContribution = new BigDecimal("500.00");
 
     @Column(name = "cycle_start_date", nullable = false)
     private LocalDate cycleStartDate = LocalDate.of(2025, 1, 1);
+
+    @Column(name = "stokvel_id")
+    private UUID stokvelId;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)

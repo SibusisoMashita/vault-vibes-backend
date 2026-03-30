@@ -5,12 +5,14 @@ import com.vaultvibes.backend.ledger.LedgerEntryRepository;
 import com.vaultvibes.backend.loans.LoanRepository;
 import com.vaultvibes.backend.pool.dto.PoolStatsDTO;
 import com.vaultvibes.backend.shares.ShareRepository;
+import com.vaultvibes.backend.users.UserService;
 import com.vaultvibes.backend.util.FinanceUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -21,17 +23,21 @@ public class PoolService {
     private final LoanRepository loanRepository;
     private final ShareRepository shareRepository;
     private final StokvelConfigService configService;
+    private final UserService userService;
 
     public PoolStatsDTO getStats() {
-        BigDecimal totalSharesCap = configService.getTotalShares();
+        UUID stokvelId = userService.getCurrentUser().getStokvelId();
 
-        BigDecimal bankBalance      = ledgerEntryRepository.sumAllLedgerAmounts();
-        BigDecimal outstandingLoans = loanRepository.sumOutstandingLoansBalance();
+        BigDecimal totalSharesCap = configService.getTotalShares(stokvelId);
+
+        BigDecimal bankBalance      = ledgerEntryRepository.sumAllLedgerAmountsByStokvelId(stokvelId);
+        BigDecimal outstandingLoans = loanRepository.sumOutstandingLoansBalanceByStokvelId(stokvelId);
         BigDecimal totalPoolValue   = FinanceUtil.calculatePoolValue(bankBalance, outstandingLoans);
-        long activeLoans            = loanRepository.countActiveLoans();
+        long activeLoans            = loanRepository.countActiveLoansByStokvelId(stokvelId);
 
-        BigDecimal sharesSold    = shareRepository.sumAllShareUnits();
-        BigDecimal pricePerShare = resolveEffectiveSharePrice(shareRepository.avgPricePerUnit());
+        BigDecimal sharesSold    = shareRepository.sumAllShareUnitsByStokvelId(stokvelId);
+        BigDecimal pricePerShare = resolveEffectiveSharePrice(
+                shareRepository.avgPricePerUnitByStokvelId(stokvelId), stokvelId);
         BigDecimal capitalCommitted = FinanceUtil.calculateCapitalCommitted(sharesSold, pricePerShare);
         BigDecimal sharesAvailable  = totalSharesCap.subtract(sharesSold).max(BigDecimal.ZERO);
 
@@ -52,10 +58,9 @@ public class PoolService {
         );
     }
 
-    /**
-     * If no shares exist yet, the average price is zero — fall back to the configured price.
-     */
-    private BigDecimal resolveEffectiveSharePrice(BigDecimal avgPrice) {
-        return avgPrice.compareTo(BigDecimal.ZERO) == 0 ? configService.getSharePrice() : avgPrice;
+    private BigDecimal resolveEffectiveSharePrice(BigDecimal avgPrice, UUID stokvelId) {
+        return avgPrice.compareTo(BigDecimal.ZERO) == 0
+                ? configService.getSharePrice(stokvelId)
+                : avgPrice;
     }
 }

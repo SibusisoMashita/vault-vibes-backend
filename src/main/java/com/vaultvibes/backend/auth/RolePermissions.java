@@ -34,13 +34,30 @@ public final class RolePermissions {
             Permission.AUDIT_LEDGER
     );
 
+    private static final Set<Permission> PLATFORM_ADMIN_PERMISSIONS = EnumSet.of(
+            Permission.VIEW_POOL,
+            Permission.VIEW_LEDGER,
+            Permission.CONTRIBUTE,
+            Permission.REQUEST_LOAN,
+            Permission.VERIFY_CONTRIBUTION,
+            Permission.ISSUE_LOAN,
+            Permission.RECORD_REPAYMENT,
+            Permission.RECORD_BANK_INTEREST,
+            Permission.INVITE_MEMBER,
+            Permission.MANAGE_SHARES,
+            Permission.VIEW_FINANCIAL_REPORTS,
+            Permission.AUDIT_LEDGER,
+            Permission.MANAGE_STOKVELS,
+            Permission.SYSTEM_ADMIN
+    );
+
     private static final Set<Permission> ALL_PERMISSIONS = EnumSet.allOf(Permission.class);
 
     private static final Map<String, Set<Permission>> ROLE_MAP = Map.of(
             "MEMBER",      MEMBER_PERMISSIONS,
             "TREASURER",   GROUP_ADMIN_PERMISSIONS,
             "CHAIRPERSON", GROUP_ADMIN_PERMISSIONS,
-            "ADMIN",       ALL_PERMISSIONS
+            "ADMIN",       PLATFORM_ADMIN_PERMISSIONS
     );
 
     private RolePermissions() {}

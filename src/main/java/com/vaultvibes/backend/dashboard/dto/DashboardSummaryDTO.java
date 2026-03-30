@@ -33,7 +33,7 @@ public record DashboardSummaryDTO(
         // Group info
         int totalMembers,
         String yearEnd,
-        String groupName,
+        String stokvelName,
 
         // Borrowing limits
         BigDecimal bankBalance,

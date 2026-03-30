@@ -4,6 +4,7 @@ import com.vaultvibes.backend.config.StokvelConfigService;
 import com.vaultvibes.backend.shares.dto.ShareDTO;
 import com.vaultvibes.backend.shares.dto.ShareSummaryDTO;
 import com.vaultvibes.backend.users.UserEntity;
+import com.vaultvibes.backend.users.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ public class ShareService {
 
     private final ShareRepository shareRepository;
     private final StokvelConfigService configService;
+    private final UserService userService;
 
     public List<ShareDTO> getSharesForUser(UUID userId) {
         return shareRepository.findByUserId(userId).stream()
@@ -32,21 +34,18 @@ public class ShareService {
     }
 
     public ShareSummaryDTO getSummary() {
-        BigDecimal totalSharesCap  = configService.getTotalShares();
-        BigDecimal sharesSold      = shareRepository.sumAllShareUnits();
+        UUID stokvelId         = userService.getCurrentUser().getStokvelId();
+        BigDecimal totalSharesCap  = configService.getTotalShares(stokvelId);
+        BigDecimal sharesSold      = shareRepository.sumAllShareUnitsByStokvelId(stokvelId);
         BigDecimal sharesAvailable = totalSharesCap.subtract(sharesSold).max(BigDecimal.ZERO);
-        BigDecimal pricePerShare   = resolveEffectiveSharePrice();
+        BigDecimal pricePerShare   = resolveEffectiveSharePrice(stokvelId);
 
         return new ShareSummaryDTO(totalSharesCap, sharesSold, sharesAvailable, pricePerShare);
     }
 
-    /**
-     * Creates a share record for a newly invited user.
-     * Called by InvitationService at invite time.
-     */
     @Transactional
     public ShareDTO allocateShares(UserEntity user, int shareUnits) {
-        BigDecimal price = configService.getSharePrice();
+        BigDecimal price = configService.getSharePrice(user.getStokvelId());
         ShareEntity share = new ShareEntity();
         share.setUser(user);
         share.setShareUnits(new BigDecimal(shareUnits));
@@ -55,11 +54,6 @@ public class ShareService {
         return toDTO(shareRepository.save(share));
     }
 
-    /**
-     * Updates the total share units for a user.
-     * If the user has an existing share record, its units are replaced.
-     * If not, a new record is created at the current share price.
-     */
     @Transactional
     public ShareDTO updateShares(UUID userId, int shareUnits, UserEntity user) {
         List<ShareEntity> existing = shareRepository.findByUserId(userId);
@@ -71,7 +65,7 @@ public class ShareService {
             share = new ShareEntity();
             share.setUser(user);
             share.setShareUnits(new BigDecimal(shareUnits));
-            share.setPricePerUnit(configService.getSharePrice());
+            share.setPricePerUnit(configService.getSharePrice(user.getStokvelId()));
             share.setPurchasedAt(OffsetDateTime.now());
         }
         return toDTO(shareRepository.save(share));
@@ -87,8 +81,10 @@ public class ShareService {
         );
     }
 
-    private BigDecimal resolveEffectiveSharePrice() {
-        BigDecimal avg = shareRepository.avgPricePerUnit();
-        return avg.compareTo(BigDecimal.ZERO) == 0 ? configService.getSharePrice() : avg;
+    private BigDecimal resolveEffectiveSharePrice(UUID stokvelId) {
+        BigDecimal avg = shareRepository.avgPricePerUnitByStokvelId(stokvelId);
+        return avg.compareTo(BigDecimal.ZERO) == 0
+                ? configService.getSharePrice(stokvelId)
+                : avg;
     }
 }

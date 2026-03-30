@@ -10,6 +10,7 @@ public record MemberDTO(
         String email,
         String role,
         String status,
+        UUID stokvelId,
         BigDecimal sharesOwned,
         BigDecimal totalCommitment,
         BigDecimal paidSoFar,

@@ -23,5 +23,9 @@ public record PoolProjectionDTO(
         BigDecimal avgMonthlyBankInterest,
         BigDecimal projectedBankInterest,
         BigDecimal projectedPoolValue,
-        BigDecimal projectedPerShareValue
+        BigDecimal projectedPerShareValue,
+        /** Monthly share price — used by frontend to calculate per-member total annual commitment. */
+        BigDecimal sharePrice,
+        /** Contribution months configured for this group (e.g. 11 if skipping December). */
+        int        contributionMonths
 ) {}

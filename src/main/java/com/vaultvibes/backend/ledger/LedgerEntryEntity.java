@@ -41,6 +41,10 @@ public class LedgerEntryEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    // Set for SYSTEM entries (no user) so they can be scoped to a stokvel
+    @Column(name = "stokvel_id")
+    private UUID stokvelId;
+
     @Column(name = "posted_at", nullable = false)
     private OffsetDateTime postedAt;
 
