@@ -37,15 +37,26 @@ public class UserController {
         return userService.listMembers();
     }
 
+    @GetMapping("/{id}")
+    @Operation(summary = "Get one user's profile and share data",
+               description = "Users may only view their own profile. TREASURER, CHAIRPERSON, and ADMIN may view any profile.")
+    public MemberDTO getUser(@PathVariable UUID id) {
+        UserEntity caller = userService.getCurrentUser();
+        if (!caller.getId().equals(id) && !permissionService.currentUserHas(Permission.MANAGE_SHARES)) {
+            throw new UserForbiddenException("Access denied — you may only view your own profile.");
+        }
+        return userService.getMember(id);
+    }
+
     @PutMapping("/{id}")
-    @Operation(summary = "Update a user's full name and email",
+    @Operation(summary = "Update a user's full name, phone number, and email",
                description = "Users may only update their own profile. TREASURER, CHAIRPERSON, and ADMIN may update any profile.")
     public UserDTO update(@PathVariable UUID id, @RequestBody Map<String, String> body) {
         UserEntity caller = userService.getCurrentUser();
         if (!caller.getId().equals(id) && !permissionService.currentUserHas(Permission.MANAGE_SHARES)) {
             throw new UserForbiddenException("Access denied — you may only update your own profile.");
         }
-        return userService.updateProfile(id, body.get("fullName"), body.get("email"));
+        return userService.updateProfile(id, body.get("fullName"), body.get("phoneNumber"), body.get("email"));
     }
 
     @PatchMapping("/{id}/status")

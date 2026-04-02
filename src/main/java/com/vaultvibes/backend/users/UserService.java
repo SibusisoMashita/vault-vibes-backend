@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
+import software.amazon.awssdk.services.cognitoidentityprovider.model.AttributeType;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.CognitoIdentityProviderException;
 
 import java.math.BigDecimal;
@@ -211,12 +212,24 @@ public class UserService {
     }
 
     @Transactional
-    public UserDTO updateProfile(UUID id, String fullName, String email) {
+    public MemberDTO getMember(UUID id) {
+        return toMemberDTO(getUserById(id));
+    }
+
+    @Transactional
+    public UserDTO updateProfile(UUID id, String fullName, String phoneNumber, String email) {
         log.info("Updating profile for user {}", id);
         UserEntity user = getUserById(id);
+        String previousPhoneNumber = user.getPhoneNumber();
+        String previousEmail = user.getEmail();
+
         if (fullName != null) user.setFullName(fullName);
+        if (phoneNumber != null) user.setPhoneNumber(phoneNumber);
         if (email != null) user.setEmail(email);
-        return toDTO(userRepository.save(user));
+
+        UserEntity savedUser = userRepository.save(user);
+        syncCognitoProfile(savedUser, previousPhoneNumber, previousEmail);
+        return toDTO(savedUser);
     }
 
     @Transactional
@@ -269,6 +282,35 @@ public class UserService {
                 new NotificationEventDetail(user.getId(), user.getPhoneNumber(), null));
 
         return saved;
+    }
+
+    private void syncCognitoProfile(UserEntity user, String previousPhoneNumber, String previousEmail) {
+        if (user.getCognitoId() == null) {
+            return;
+        }
+
+        try {
+            var attributes = new java.util.ArrayList<AttributeType>();
+            attributes.add(AttributeType.builder().name("name").value(user.getFullName()).build());
+
+            if (user.getPhoneNumber() != null && !user.getPhoneNumber().equals(previousPhoneNumber)) {
+                attributes.add(AttributeType.builder().name("phone_number").value(user.getPhoneNumber()).build());
+                attributes.add(AttributeType.builder().name("phone_number_verified").value("true").build());
+            }
+
+            if (user.getEmail() != null && !user.getEmail().equals(previousEmail)) {
+                attributes.add(AttributeType.builder().name("email").value(user.getEmail()).build());
+                attributes.add(AttributeType.builder().name("email_verified").value("true").build());
+            }
+
+            cognitoClient.adminUpdateUserAttributes(request -> request
+                    .userPoolId(userPoolId)
+                    .username(user.getCognitoId())
+                    .userAttributes(attributes));
+        } catch (CognitoIdentityProviderException e) {
+            log.warn("AUTH_COGNITO_PROFILE_SYNC_FAILED: cognito_id={} user_id={}: {}",
+                    user.getCognitoId(), user.getId(), e.getMessage());
+        }
     }
 
 }
