@@ -7,6 +7,7 @@ import com.vaultvibes.backend.loans.dto.LoanRequestDTO;
 import com.vaultvibes.backend.users.UserEntity;
 import com.vaultvibes.backend.users.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,19 @@ public class LoanController {
     @Operation(summary = "Submit a new borrowing request")
     public LoanDTO requestLoan(@Valid @RequestBody LoanRequestDTO request) {
         return loanService.requestLoan(request);
+    }
+
+    @PostMapping("/issue")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Issue a loan directly on behalf of a member (admin only)",
+               description = "Bypasses the member-request flow. Loan is created immediately as ACTIVE, " +
+                       "ledger entry posted, and member notified. Requires ISSUE_LOAN permission.")
+    @ApiResponse(responseCode = "201", description = "Loan issued")
+    @ApiResponse(responseCode = "400", description = "Validation error or borrowing limit exceeded")
+    @ApiResponse(responseCode = "403", description = "Insufficient permissions")
+    public LoanDTO issueLoan(@Valid @RequestBody LoanRequestDTO request) {
+        permissionService.require(Permission.ISSUE_LOAN);
+        return loanService.issueLoan(request);
     }
 
     @PostMapping("/{id}/approve")

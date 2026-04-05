@@ -155,6 +155,83 @@ public class LoanService {
     }
 
     @Transactional
+    public LoanDTO issueLoan(LoanRequestDTO request) {
+        log.info("LOAN_ISSUE_BY_ADMIN: amount={} user={}", request.amount(), request.userId());
+
+        UserEntity user = userRepository.findById(request.userId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.userId()));
+
+        if ("PENDING".equals(user.getStatus())) {
+            throw new IllegalArgumentException("This member's account is not yet active. Contact the platform admin.");
+        }
+
+        BigDecimal configuredRate = configService.getInterestRate(user.getStokvelId());
+
+        BigDecimal memberShares = shareRepository.sumShareUnitsByUserId(request.userId());
+        if (memberShares.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Member must hold at least one share to receive a loan.");
+        }
+
+        BigDecimal sharesSold       = shareRepository.sumAllShareUnitsByStokvelId(user.getStokvelId());
+        BigDecimal bankBalance      = ledgerEntryRepository.sumAllLedgerAmountsByStokvelId(user.getStokvelId());
+        BigDecimal outstandingLoans = loanRepository.sumOutstandingLoansBalanceByStokvelId(user.getStokvelId());
+        BigDecimal totalPoolValue   = FinanceUtil.calculatePoolValue(bankBalance, outstandingLoans);
+        BigDecimal perShareValue    = FinanceUtil.calculateShareValue(
+                totalPoolValue, sharesSold, configService.getSharePrice(user.getStokvelId()));
+        BigDecimal memberShareValue = FinanceUtil.calculateMemberValue(memberShares, perShareValue);
+
+        BigDecimal userOutstanding   = loanRepository.sumOutstandingLoansByUserId(request.userId());
+        BigDecimal memberBorrowLimit = FinanceUtil.calculateMemberBorrowLimit(
+                memberShareValue, userOutstanding, MEMBER_COLLATERAL_RATIO);
+        BigDecimal poolBorrowLimit   = FinanceUtil.calculatePoolBorrowLimit(
+                bankBalance, outstandingLoans, POOL_LIQUIDITY_RATIO);
+        BigDecimal availableToBorrow = memberBorrowLimit.min(poolBorrowLimit);
+
+        if (loanRepository.countCrossMonthActiveLoans(request.userId()) > 0) {
+            throw new IllegalArgumentException(
+                    "This member has an active loan from a previous month. Repay it before issuing a new one.");
+        }
+
+        if (request.amount().compareTo(availableToBorrow) > 0) {
+            throw new IllegalArgumentException(
+                    "Amount exceeds borrowing limit. Maximum available: " + availableToBorrow);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        LoanEntity loan = new LoanEntity();
+        loan.setUser(user);
+        loan.setPrincipalAmount(request.amount());
+        loan.setInterestRate(configuredRate);
+        loan.setStatus("ACTIVE");
+        loan.setIssuedAt(now);
+        loan.setDueAt(now.with(TemporalAdjusters.lastDayOfMonth())
+                .withHour(23).withMinute(59).withSecond(59).withNano(0));
+
+        LoanEntity saved = loanRepository.saveAndFlush(loan);
+        log.info("LOAN_ISSUED: id={} user={}", saved.getId(), user.getFullName());
+
+        LedgerEntryEntity entry = new LedgerEntryEntity();
+        entry.setUser(saved.getUser());
+        entry.setEntryType("LOAN_ISSUED");
+        entry.setEntryScope("USER");
+        entry.setAmount(saved.getPrincipalAmount().negate());
+        entry.setReference(saved.getId().toString());
+        entry.setDescription("Loan issued — " + saved.getUser().getFullName());
+        entry.setPostedAt(now);
+        ledgerEntryRepository.save(entry);
+
+        notificationEventService.publish(
+                NotificationEventType.LOAN_APPROVED,
+                new NotificationEventDetail(saved.getUser().getId(), saved.getUser().getPhoneNumber(), saved.getPrincipalAmount()));
+        notificationEventService.publish(
+                NotificationEventType.LOAN_ISSUED,
+                new NotificationEventDetail(saved.getUser().getId(), saved.getUser().getPhoneNumber(), saved.getPrincipalAmount()));
+
+        return toDTO(saved);
+    }
+
+    @Transactional
     public LoanDTO markRepaid(UUID loanId) {
         log.info("LOAN_REPAID: id={}", loanId);
         LoanEntity loan = loanRepository.findById(loanId)
